@@ -13,8 +13,8 @@ class DEGRAD(torch.nn.Module):
         self.padding = self.ksz // 2
         self.A = blur_operator
         self.eta = step_size
-        self.max_num_iter = 100
-        self.threshold = 1e-3
+        self.max_num_iter = 200
+        self.threshold = 1e-1
 
         # Trainable parameters
 

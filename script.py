@@ -21,7 +21,7 @@ transform = transforms.Compose(
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ]
 )
-bsz = 16 # batch size
+bsz = 200 # batch size
 kernel_size = 5
 kernel_sigma = 5.0
 noise_sigma = 1e-2
@@ -37,8 +37,8 @@ A = GaussianBlur(sigma=kernel_sigma, kernel_size=kernel_size).to(device=device)
 measurement_process = OperatorPlusNoise(A, noise_sigma=noise_sigma)
 
 num_channels = 3
-lossfunction = torch.nn.MSELoss(reduction='sum')
-learning_rate = 0.001
+lossfunction = torch.div(torch.nn.MSELoss(reduction='sum'), bsz)
+learning_rate = 0.1
 step_size = 0.001
 num_epoch = 100
 degrad_model = DEGRAD(c=num_channels, blur_operator=A, step_size=step_size)
