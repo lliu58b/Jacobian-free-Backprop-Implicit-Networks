@@ -11,7 +11,8 @@ from DEmodels import *
 
 # Load the data
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-data_location = './data/'
+data_location = '/users/lliu58/data/lliu58/Jacobian-free-Backprop-Implicit-Networks/data/'
+# data_location = './data/'
 
 transform = transforms.Compose(
     [
@@ -39,7 +40,7 @@ num_channels = 3
 lossfunction = torch.nn.MSELoss(reduction='sum')
 learning_rate = 0.001
 step_size = 0.001
-num_epoch = 1
+num_epoch = 100
 degrad_model = DEGRAD(c=num_channels, blur_operator=A, step_size=step_size)
 degrad_model.to(device)
 optimizer = torch.optim.Adam(degrad_model.parameters(), lr=learning_rate)
@@ -55,6 +56,7 @@ for epoch in range(num_epoch):
     avg_loss_epoch.append(epoch_loss)
     avg_n_iters.append(epoch_n_iters)
     avg_grad_norm.append(epoch_grad_norm)
-    print(f"Epoch {epoch+1} finished, average loss: {epoch_loss:.4f}, average number of iterations: {epoch_n_iters} out of 100, average gradient norm: {epoch_grad_norm:.4f}")
+    print("Epoch " + str(epoch+1) +" finished, average loss:" +str(epoch_loss)+ " average number of iterations: " + str(epoch_n_iters) + "out of 100, average gradient norm: "+ str(epoch_grad_norm))
     # test_batch(degrad_model, data_batch, device)
-# plotting(avg_loss_epoch, avg_n_iters, avg_grad_norm)
+    if epoch % 10 == 0:
+        plotting(avg_loss_epoch, avg_n_iters, avg_grad_norm, epoch)
