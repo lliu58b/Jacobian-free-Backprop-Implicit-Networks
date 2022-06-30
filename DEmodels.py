@@ -3,7 +3,7 @@ import spectral_norm_chen as chen
 
 
 class DEGRAD(torch.nn.Module):
-    def __init__(self, c, blur_operator, step_size, num_layers=17, kernel_size=3, features=64):
+    def __init__(self, c, batch_size, blur_operator, step_size, num_layers=17, kernel_size=3, features=64):
         super().__init__()
 
         self.nchannels = c
@@ -14,7 +14,8 @@ class DEGRAD(torch.nn.Module):
         self.A = blur_operator
         self.eta = step_size
         self.max_num_iter = 200
-        self.threshold = 1e-1
+        self.threshold = 1e-2
+        self.bsz = batch_size
 
         # Trainable parameters
 
@@ -50,13 +51,14 @@ class DEGRAD(torch.nn.Module):
         return temp, self.max_num_iter
     
     def current_grad_norm(self):
-        S = 0
-        for p in self.parameters():
-            if p.grad==None:
-                continue # some gradients don't exist
-            param_norm = torch.norm(p.grad.detach().data)
-            S += param_norm.item() ** 2
-        S = S ** 0.5
+        with torch.no_grad():
+            S = 0
+            for p in self.parameters():
+                if p.grad==None:
+                    continue # some gradients don't exist
+                param_norm = torch.norm(p.grad.detach().data)
+                S += param_norm.item() ** 2
+            S = S ** 0.5
         return S
 
 class DEPROX(torch.nn.Module):
@@ -103,7 +105,7 @@ class DEPROX(torch.nn.Module):
                     return x
                 else:
                     temp = x
-	return temp
+        return temp
 
     def current_grad_norm(self):
         with torch.no_grad():
