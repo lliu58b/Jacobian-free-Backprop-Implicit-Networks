@@ -37,5 +37,5 @@ def plotting(loss_list, n_iters_list, grad_norm_list, epoch_number):
     plt.plot(grad_norm_list)
     plt.xlabel("#epochs")
     plt.ylabel("avg gradient norm")
-    plt.savefig("/users/lliu58/data/lliu58/Jacobian-free-Backprop-Implicit-Networks/"+str(epoch_number)+"results.png")
+    plt.savefig("./data/lliu58/Jacobian-free-Backprop-Implicit-Networks/degrad_output2/epoch"+str(epoch_number)+"results.png")
     # plt.savefig("./results/"+str(epoch_number)+"results.png")
