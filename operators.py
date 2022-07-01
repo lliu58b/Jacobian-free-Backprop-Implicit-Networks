@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as torchfunc
 import numbers
 import numpy as np
-
+from matplotlib import pyplot as plt
 
 # Define Operator classes
 class LinearOperator(torch.nn.Module):
