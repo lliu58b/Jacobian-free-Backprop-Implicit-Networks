@@ -11,8 +11,8 @@ from DEmodels import *
 
 # Load the data
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-data_location = '/users/lliu58/data/lliu58/Jacobian-free-Backprop-Implicit-Networks/data/'
-# data_location = './data/'
+# data_location = '/users/lliu58/data/lliu58/new/Jacobian-free-Backprop-Implicit-Networks/data/'
+data_location = './data/'
 
 transform = transforms.Compose(
     [
@@ -21,7 +21,7 @@ transform = transforms.Compose(
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ]
 )
-bsz = 200 # batch size
+bsz = 32 # batch size
 kernel_size = 5
 kernel_sigma = 5.0
 noise_sigma = 1e-2
@@ -37,17 +37,19 @@ A = GaussianBlur(sigma=kernel_sigma, kernel_size=kernel_size).to(device=device)
 measurement_process = OperatorPlusNoise(A, noise_sigma=noise_sigma)
 
 num_channels = 3
-lossfunction = torch.div(torch.nn.MSELoss(reduction='sum'), bsz)
-learning_rate = 0.1
+lossfunction = torch.nn.MSELoss(reduction='sum')
+learning_rate = 0.001
 step_size = 0.001
 num_epoch = 100
-degrad_model = DEGRAD(c=num_channels, blur_operator=A, step_size=step_size)
+degrad_model = DEGRAD(c=num_channels, batch_size=bsz, blur_operator=A, step_size=step_size)
 degrad_model.to(device)
 optimizer = torch.optim.Adam(degrad_model.parameters(), lr=learning_rate)
 avg_loss_epoch = []
 avg_n_iters = []
 avg_grad_norm = []
 data_batch = iter(test_dataloader).next()
+# temppath = "./data/lliu58/new/Jacobian-free-Backprop-Implicit-Networks/degrad_output_imgs/"
+temppath = "./degrad_1/"
 for epoch in range(num_epoch):
     epoch_loss_list, epoch_n_iters_list, grad_norm_list = train_jfb(degrad_model, train_dataloader, measurement_process, lossfunction, optimizer, device)
     epoch_loss = np.mean(epoch_loss_list)
@@ -56,7 +58,16 @@ for epoch in range(num_epoch):
     avg_loss_epoch.append(epoch_loss)
     avg_n_iters.append(epoch_n_iters)
     avg_grad_norm.append(epoch_grad_norm)
-    print("Epoch " + str(epoch+1) +" finished, average loss:" +str(epoch_loss)+ " average number of iterations: " + str(epoch_n_iters) + "out of 100, average gradient norm: "+ str(epoch_grad_norm))
+    print("Epoch " + str(epoch+1) +" finished, average loss:" +str(epoch_loss)+ " average number of iterations: " + str(epoch_n_iters) + " out of 150, average gradient norm: "+ str(epoch_grad_norm))
     # test_batch(degrad_model, data_batch, device)
     if epoch % 10 == 0:
         plotting(avg_loss_epoch, avg_n_iters, avg_grad_norm, epoch)
+    
+        np.save(temppath+"avg_loss_epoch"+str(epoch), np.array(avg_loss_epoch))
+        np.save(temppath+"avg_n_iters"+str(epoch), np.array(avg_n_iters))
+        np.save(temppath+"avg_grad_norm"+str(epoch), np.array(avg_grad_norm))
+
+torch.save(degrad_model.state_dict(), temppath+'weights_only.pth')
+np.save(temppath+"avg_loss_epoch", np.array(avg_loss_epoch))
+np.save(temppath+"avg_n_iters", np.array(avg_n_iters))
+np.save(temppath+"avg_grad_norm", np.array(avg_grad_norm))
