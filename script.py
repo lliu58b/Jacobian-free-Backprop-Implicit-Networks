@@ -41,7 +41,7 @@ lossfunction = torch.div(torch.nn.MSELoss(reduction='sum'), bsz)
 learning_rate = 0.1
 step_size = 0.001
 num_epoch = 100
-degrad_model = DEGRAD(c=num_channels, blur_operator=A, step_size=step_size)
+degrad_model = DEGPROX(c=num_channels, blur_operator=A, step_size=step_size)
 degrad_model.to(device)
 optimizer = torch.optim.Adam(degrad_model.parameters(), lr=learning_rate)
 avg_loss_epoch = []
