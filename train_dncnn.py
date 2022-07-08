@@ -95,3 +95,4 @@ for epoch in range(num_epoch):
     print("Epoch "+str(epoch)+" finished, average loss: " +str(epoch_avg_loss))
 torch.save(dncnn_model.state_dict(), './dncnn_pretrain/weights5.pth')
 np.save("./dncnn_pretrain/avglossvsepoch5", np.array(avg_loss))
+
