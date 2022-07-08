@@ -25,7 +25,6 @@ def train_jfb(model, loader, operator, loss_function, optimizer, device):
 
 def plotting(loss_list, n_iters_list, grad_norm_list, epoch_number):
     fig = plt.figure()
-    fig.set_size_inches(18.5, 10)
     fig.add_subplot(1, 3, 1)
     plt.plot(loss_list)
     plt.xlabel("# epochs")
@@ -40,4 +39,4 @@ def plotting(loss_list, n_iters_list, grad_norm_list, epoch_number):
     plt.ylabel("avg gradient norm")
     # plt.savefig("./data/lliu58/Jacobian-free-Backprop-Implicit-Networks/degrad_output_imgs/epoch"+str(epoch_number)+"results.png")
     # plt.savefig("./results/"+str(epoch_number)+"results.png")
-    plt.savefig("./degrad_1/"+str(epoch_number)+"results.png")
+    plt.savefig("./degrad_1_cont/"+str(epoch_number)+"results.png")
