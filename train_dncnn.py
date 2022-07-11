@@ -4,32 +4,9 @@ import numpy as np
 from customdataset import *
 from operators import *
 from metrics import *
+from models import *
 from torchvision import transforms
-from torch.nn import utils
 
-class DNCNN(torch.nn.Module):
-    def __init__(self, c, batch_size, num_layers=17, kernel_size=3, features=64):
-        super().__init__()
-        self.nchannels = c
-        self.nlayers = num_layers
-        self.ksz = kernel_size
-        self.nfeatures = features
-        self.padding = self.ksz // 2
-        self.bsz = batch_size
-
-        layers = []
-        layers.append(utils.spectral_norm(torch.nn.Conv2d(in_channels=self.nchannels, out_channels= self.nfeatures, kernel_size=self.ksz, padding=self.padding, bias=False)))
-        layers.append(torch.nn.ReLU(inplace=True))
-        for _ in range(self.nlayers-2):
-            layers.append(utils.spectral_norm(torch.nn.Conv2d(in_channels=self.nfeatures, out_channels=self.nfeatures, kernel_size=self.ksz, padding=self.padding, bias=False)))
-            layers.append(torch.nn.BatchNorm2d(self.nfeatures))
-            layers.append(torch.nn.ReLU(inplace=True))
-        layers.append(utils.spectral_norm(torch.nn.Conv2d(in_channels=self.nfeatures, out_channels=self.nchannels, kernel_size=self.ksz, padding=self.padding, bias=False)))
-        # Put them altogether and call it dncnn
-        self.dncnn = torch.nn.Sequential(*layers)
-    
-    def forward(self, measurement):
-        return self.dncnn(measurement)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 data_location = './data/'
