@@ -1,6 +1,7 @@
 '''
 Functions for training and testing different models
 '''
+import torch
 from matplotlib import pyplot as plt
 
 def train_jfb(model, loader, operator, loss_function, optimizer, device):
@@ -14,7 +15,7 @@ def train_jfb(model, loader, operator, loss_function, optimizer, device):
         X = X.to(device)
         d = operator.forward(X)
         pred, n_iters = model(d)
-        batch_loss = loss_function(pred, X)
+        batch_loss = torch.div(loss_function(pred, X), model.bsz)
         batch_loss.backward()
         grad_norm_list.append(model.current_grad_norm())
         optimizer.step()
@@ -24,7 +25,6 @@ def train_jfb(model, loader, operator, loss_function, optimizer, device):
 
 def plotting(loss_list, n_iters_list, grad_norm_list, epoch_number):
     fig = plt.figure()
-    fig.set_size_inches(18.5, 10)
     fig.add_subplot(1, 3, 1)
     plt.plot(loss_list)
     plt.xlabel("# epochs")
@@ -37,5 +37,6 @@ def plotting(loss_list, n_iters_list, grad_norm_list, epoch_number):
     plt.plot(grad_norm_list)
     plt.xlabel("#epochs")
     plt.ylabel("avg gradient norm")
-    plt.savefig("/users/lliu58/data/lliu58/Jacobian-free-Backprop-Implicit-Networks/"+str(epoch_number)+"results.png")
+    # plt.savefig("./data/lliu58/Jacobian-free-Backprop-Implicit-Networks/degrad_output_imgs/epoch"+str(epoch_number)+"results.png")
     # plt.savefig("./results/"+str(epoch_number)+"results.png")
+    plt.savefig("./degrad_1_cont/"+str(epoch_number)+"results.png")
