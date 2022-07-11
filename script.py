@@ -5,7 +5,7 @@ from operators import *
 from metrics import *
 from functions import *
 from customdataset import *
-from DEmodels import *
+from models import *
 
 
 
