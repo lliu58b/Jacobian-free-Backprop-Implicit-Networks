@@ -29,7 +29,7 @@ noise_sigma = 1e-2
 train_dataset = CelebADataset(data_location, transform=transform)
 valid_dataset = CelebADataset(data_location, train=False, transform=transform)
 train_dataloader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=bsz, shuffle=True, drop_last=True)
-valid_dataloader = torch.utils.data.DataLoader(dataset=valid_dataset, batch_size=bsz, shuffle=False, drop_last=True)
+valid_dataloader = torch.utils.data.DataLoader(dataset=valid_dataset, batch_size=2000, shuffle=False, drop_last=True) # hand code this batch_size
 
 # A matches the same notation in the paper
 A = GaussianBlur(sigma=kernel_sigma, kernel_size=kernel_size).to(device=device)
@@ -47,7 +47,7 @@ optimizer = torch.optim.Adam(degrad_model.parameters(), lr=learning_rate)
 avg_loss_epoch = []
 avg_n_iters = []
 avg_grad_norm = []
-data_batch = iter(test_dataloader).next()
+data_batch = iter(valid_dataloader).next()
 # temppath = "./data/lliu58/new/Jacobian-free-Backprop-Implicit-Networks/degrad_output_imgs/"
 temppath = "./degrad_1/"
 for epoch in range(num_epoch):

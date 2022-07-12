@@ -6,10 +6,12 @@ from matplotlib import pyplot as plt
 
 def train_jfb(model, loader, operator, loss_function, optimizer, device):
     model.train()
+    model.dncnn.train()
     L = []
     n_iters_list = []
     grad_norm_list = []
     for batch_idx, X in enumerate(loader):
+        optimizer.zero_grad()
         if batch_idx % 10 == 0:
             print(f'current batch: {batch_idx}')
         X = X.to(device)
@@ -22,6 +24,17 @@ def train_jfb(model, loader, operator, loss_function, optimizer, device):
         L.append(batch_loss.item())
         n_iters_list.append(n_iters)
     return L, n_iters_list, grad_norm_list
+
+def valid_jfb(model, loader, operator, loss_function, device):
+    model.eval()
+    model.dncnn.eval()
+    for _, X in enumerate(loader):
+        X = X.to(device)
+        d = operator.forward(X)
+        pred, _ = model(d)
+        batch_loss = loss_function(pred, X)
+    return batch_loss.item()
+
 
 def plotting(loss_list, n_iters_list, grad_norm_list, epoch_number):
     fig = plt.figure()
