@@ -42,6 +42,7 @@ learning_rate = 0.001
 step_size = 0.001
 num_epoch = 100
 degrad_model = DEGRAD(c=num_channels, batch_size=bsz, blur_operator=A, step_size=step_size)
+# TODO: load weights
 degrad_model.to(device)
 optimizer = torch.optim.Adam(degrad_model.parameters(), lr=learning_rate)
 avg_loss_epoch = []
@@ -50,7 +51,9 @@ avg_grad_norm = []
 data_batch = iter(test_dataloader).next()
 # temppath = "./data/lliu58/new/Jacobian-free-Backprop-Implicit-Networks/degrad_output_imgs/"
 temppath = "./degrad_1/"
+lowest_loss = np.Inf
 for epoch in range(num_epoch):
+    
     epoch_loss_list, epoch_n_iters_list, grad_norm_list = train_jfb(degrad_model, train_dataloader, measurement_process, lossfunction, optimizer, device)
     epoch_loss = np.mean(epoch_loss_list)
     epoch_n_iters = np.mean(epoch_n_iters_list)

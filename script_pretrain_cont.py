@@ -5,7 +5,7 @@ from operators import *
 from metrics import *
 from functions import *
 from customdataset import *
-from DEmodels import *
+from models import *
 
 
 
@@ -50,7 +50,7 @@ avg_n_iters = []
 avg_grad_norm = []
 data_batch = iter(test_dataloader).next()
 # temppath = "./data/lliu58/new/Jacobian-free-Backprop-Implicit-Networks/degrad_output_imgs/"
-temppath = "./degrad_1_cont/"
+temppath = "./degrad_fixlr/"
 for epoch in range(num_epoch):
     epoch_loss_list, epoch_n_iters_list, grad_norm_list = train_jfb(degrad_model, train_dataloader, measurement_process, lossfunction, optimizer, device)
     epoch_loss = np.mean(epoch_loss_list)
@@ -68,7 +68,6 @@ for epoch in range(num_epoch):
         np.save(temppath+"avg_n_iters"+str(epoch), np.array(avg_n_iters))
         np.save(temppath+"avg_grad_norm"+str(epoch), np.array(avg_grad_norm))
 
-torch.save(degrad_model.state_dict(), temppath+'weights_only.pth')
 np.save(temppath+"avg_loss_epoch", np.array(avg_loss_epoch))
 np.save(temppath+"avg_n_iters", np.array(avg_n_iters))
 np.save(temppath+"avg_grad_norm", np.array(avg_grad_norm))
