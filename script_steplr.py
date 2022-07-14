@@ -29,7 +29,7 @@ train_dataset = CelebADataset(data_location, transform=transform)
 valid_dataset = CelebADataset(data_location, train=False, transform=transform)
 train_dataloader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=bsz, shuffle=True, drop_last=True)
 # Want to calculate valid dataset in one batch
-valid_dataloader = torch.utils.data.DataLoader(dataset=valid_dataset, batch_size=2000, shuffle=False, drop_last=True)
+valid_dataloader = torch.utils.data.DataLoader(dataset=valid_dataset, batch_size=bsz, shuffle=False, drop_last=True)
 
 # A matches the same notation in the paper
 A = GaussianBlur(sigma=kernel_sigma, kernel_size=kernel_size).to(device=device)
@@ -64,14 +64,14 @@ for epoch in range(num_epoch):
     avg_loss_epoch.append(epoch_loss)
     avg_n_iters.append(epoch_n_iters)
     avg_grad_norm.append(epoch_grad_norm)
-    print("Epoch " + str(epoch+1) +" finished, average loss:" +str(epoch_loss)+ " average number of iterations: " + str(epoch_n_iters) + " out of 150, average gradient norm: "+ str(epoch_grad_norm))
+    print("Epoch " + str(epoch+1) +" finished, average loss:" +str(epoch_loss)+ " average number of iterations: " + str(epoch_n_iters) + ", average gradient norm: "+ str(epoch_grad_norm))
     valid_loss = valid_jfb(model, valid_dataloader, measurement_process, lossfunction, device)
     if valid_loss < lowest_loss:
         lowest_loss = valid_loss
         torch.save(model.dncnn.state_dict(), temppath+"dncnn_weights.pth")
         print("epoch "+str(epoch+1)+" weights saved")
     if epoch % 10 == 0:
-        plotting(avg_loss_epoch, avg_n_iters, avg_grad_norm, epoch)
+        plotting(avg_loss_epoch, avg_n_iters, avg_grad_norm, epoch, temppath)
     
         np.save(temppath+"avg_loss_epoch"+str(epoch), np.array(avg_loss_epoch))
         np.save(temppath+"avg_n_iters"+str(epoch), np.array(avg_n_iters))

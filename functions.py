@@ -28,15 +28,19 @@ def train_jfb(model, loader, operator, loss_function, optimizer, device):
 def valid_jfb(model, loader, operator, loss_function, device):
     model.eval()
     model.dncnn.eval()
-    for _, X in enumerate(loader):
+    acc = 0
+    for batch_idx, X in enumerate(loader):
+        if batch_idx > 4:
+            break
         X = X.to(device)
         d = operator.forward(X)
         pred, _ = model(d)
         batch_loss = loss_function(pred, X)
-    return batch_loss.item()
+        acc += batch_loss.item()
+    return acc/5
 
 
-def plotting(loss_list, n_iters_list, grad_norm_list, epoch_number):
+def plotting(loss_list, n_iters_list, grad_norm_list, epoch_number, path):
     fig = plt.figure()
     fig.add_subplot(1, 3, 1)
     plt.plot(loss_list)
@@ -52,4 +56,4 @@ def plotting(loss_list, n_iters_list, grad_norm_list, epoch_number):
     plt.ylabel("avg gradient norm")
     # plt.savefig("./data/lliu58/Jacobian-free-Backprop-Implicit-Networks/degrad_output_imgs/epoch"+str(epoch_number)+"results.png")
     # plt.savefig("./results/"+str(epoch_number)+"results.png")
-    plt.savefig("./degrad_1_cont/"+str(epoch_number)+"results.png")
+    plt.savefig(path+"results"+str(epoch_number)+".png")
