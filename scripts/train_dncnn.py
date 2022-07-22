@@ -1,11 +1,13 @@
 import torch
 import numpy as np
 
-from support.operators import *
-from support.metrics import *
-from support.functions import *
-from support.customdataset import *
-from support.models import *
+import sys
+sys.path.append('./support')
+from customdataset import *
+from functions import *
+from metrics import *
+from models import *
+from operators import *
 from torchvision import transforms
 
 
