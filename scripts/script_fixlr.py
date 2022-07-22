@@ -23,7 +23,7 @@ transform = transforms.Compose(
     ]
 )
 bsz = 32 # batch size
-kernel_size = 9
+kernel_size = 5
 kernel_sigma = 5.0
 noise_sigma = 1e-2
 
@@ -40,8 +40,8 @@ measurement_process = OperatorPlusNoise(A, noise_sigma=noise_sigma)
 
 num_channels = 3
 lossfunction = torch.nn.MSELoss(reduction='sum')
-learning_rate = 0.01 # Try different
-step_size = 0.01
+learning_rate = 0.0001 # Try different
+step_size = 0.001
 num_epoch = 200
 dncnn_kernel_size = 3
 model = DEGRAD(c=num_channels, batch_size=bsz, blur_operator=A, step_size=step_size, kernel_size=dncnn_kernel_size)

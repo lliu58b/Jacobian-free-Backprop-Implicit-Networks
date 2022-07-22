@@ -23,7 +23,7 @@ transform = transforms.Compose(
     ]
 )
 bsz = 32 # batch size
-blur_kernel_size = 9
+blur_kernel_size = 5
 kernel_sigma = 5.0
 noise_sigma = 1e-2
 
@@ -40,7 +40,7 @@ measurement_process = OperatorPlusNoise(A, noise_sigma=noise_sigma)
 num_channels = 3
 lossfunction = torch.nn.MSELoss(reduction='sum')
 learning_rate = 0.001
-num_epoch = 1000
+num_epoch = 200
 dncnn_kernel_size = 3
 
 # model initialization

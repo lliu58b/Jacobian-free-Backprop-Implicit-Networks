@@ -57,6 +57,7 @@ class DEGRAD(torch.nn.Module):
         self.dncnn = DNCNN(c=self.nchannels, batch_size=self.bsz, kernel_size=kernel_size)
     
     def forward(self, measurement):
+        self.eta = torch.clamp(self.eta, min=1e-6, max=2)
         with torch.no_grad():
             xstar, n_iters = self.find_fixed_point(measurement)
         Txstar = xstar - self.eta * (self.A.adjoint(torch.sub(self.A.forward(xstar), measurement)) + self.dncnn(xstar))
@@ -68,7 +69,7 @@ class DEGRAD(torch.nn.Module):
             temp = x0
             for i in range(self.max_num_iter):
                 x = temp - self.eta * (self.A.adjoint(torch.sub(self.A.forward(temp), measurement)) + self.dncnn(temp))
-                if torch.norm(torch.sub(x, temp)) < self.threshold:
+                if self._converge(x, temp):
                     return x, (i+1)
                 else:
                     temp = x
@@ -84,6 +85,14 @@ class DEGRAD(torch.nn.Module):
                 S += param_norm.item() ** 2
             S = S ** 0.5
         return S
+    
+    def _converge(self, x1, x2):
+        x1 = torch.reshape(x1, [self.bsz, -1])
+        x2 = torch.flatten(x2, [self.bsz, -1])
+        if torch.max(torch.norm(torch.sub(x1, x2), dim=1)) < self.threshold:
+            return True
+        else:
+            return False
 
 class DEPROX(torch.nn.Module):
     def __init__(self, c, blur_operator, step_size, num_layers=17, kernel_size=3, features=64):
@@ -95,7 +104,7 @@ class DEPROX(torch.nn.Module):
         self.nfeatures = features
         self.padding = self.ksz // 2
         self.A = blur_operator
-        self.eta = step_size
+        self.eta = torch.nn.Parameter(step_size*torch.ones(()))
         self.max_num_iter = 100
         self.threshold = 1e-3
 
