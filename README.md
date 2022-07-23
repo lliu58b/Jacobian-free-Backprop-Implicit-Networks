@@ -1,7 +1,7 @@
 ## Emory Math REU 2022: Jacobian-Free Backpropagation (JFB) for Implicit Networks
 Repository for Team JFB working on the project **Fast Training of Implicit Networks with Applications in Inverse Problems** during the Emory Computatational
 Math REU.
-The team is mentored by Dr. Samy Wu Fung (Colorado School of Mines) and consists of 3 undergraduate students:
+The team is mentored by Dr. Samy Wu Fung and consists of 3 undergraduate students:
 1. Linghai Liu, Brown University
 2. Shuaicheng Tong, UCLA
 3. Lisa Zhao, UC Berkeley
@@ -25,4 +25,3 @@ Use the following to train the model
 
 - pretrain dncnn: ``python ./scripts/script_pretrain.py``. The output is supposed to be in ``./results/dncnn_pretrain/``
 - train DE-GRAD with JFB: ``python ./scripts/script_fixlr.py``. The output is supposed to be in ``./results/degrad_fixlr/``
-
