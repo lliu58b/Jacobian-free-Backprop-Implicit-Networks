@@ -57,7 +57,6 @@ class DEGRAD(torch.nn.Module):
         self.dncnn = DNCNN(c=self.nchannels, batch_size=self.bsz, kernel_size=kernel_size)
     
     def forward(self, measurement):
-        self.eta = torch.clamp(self.eta, min=1e-6, max=2)
         with torch.no_grad():
             xstar, n_iters = self.find_fixed_point(measurement)
         Txstar = xstar - self.eta * (self.A.adjoint(torch.sub(self.A.forward(xstar), measurement)) + self.dncnn(xstar))

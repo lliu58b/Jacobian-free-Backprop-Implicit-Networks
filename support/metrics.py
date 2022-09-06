@@ -52,9 +52,9 @@ class SSIM(torch.nn.Module):
             self.channel = channel
 
 
-        return _ssim(img1, img2, window, self.window_size, channel, self.size_average)
+        return self._ssim(img1, img2, window, self.window_size, channel, self.size_average)
     
-    def _ssim(img1, img2, window, window_size, channel, size_average = True):
+    def _ssim(self, img1, img2, window, window_size, channel, size_average = True):
         mu1 = torchfunc.conv2d(img1, window, padding = window_size//2, groups = channel)
         mu2 = torchfunc.conv2d(img2, window, padding = window_size//2, groups = channel)
 

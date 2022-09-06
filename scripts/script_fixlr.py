@@ -82,11 +82,12 @@ for epoch in range(warming_epochs):
     valid_ssim_list.append(valid_ssim)
     if valid_loss < lowest_loss:
         lowest_loss = valid_loss
-        torch.save(model.state_dict(), temppath+"trained_model.pth")
+        torch.save(model.state_dict(), temppath+"trained_model_warmup.pth")
         print("Epoch "+str(epoch+1)+" weights saved")
     print(f"Epoch {epoch+1} finished, avg loss {epoch_loss:.3f}, avg #iters {epoch_n_iters:.3f}, avg grad norm {epoch_grad_norm:.3f}, valid loss {valid_loss:.3f}, valid ssim {valid_ssim:.3f}")
 
 model.max_num_iter = 150
+lowest_loss = np.Inf
 for epoch in range(num_epoch):
     epoch_loss_list, epoch_n_iters_list, grad_norm_list = train_jfb(model, train_dataloader, measurement_process, lossfunction, optimizer, device)
     epoch_loss = np.mean(epoch_loss_list)
