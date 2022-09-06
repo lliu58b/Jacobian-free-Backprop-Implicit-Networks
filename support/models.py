@@ -49,7 +49,7 @@ class DEGRAD(torch.nn.Module):
         self.A = blur_operator
         self.eta = torch.nn.Parameter(step_size*torch.ones(()))
         self.max_num_iter = 150
-        self.threshold = 1e-1
+        self.threshold = 1e-3
         self.bsz = batch_size
 
         # Trainable parameters
@@ -57,7 +57,6 @@ class DEGRAD(torch.nn.Module):
         self.dncnn = DNCNN(c=self.nchannels, batch_size=self.bsz, kernel_size=kernel_size)
     
     def forward(self, measurement):
-        self.eta = torch.clamp(self.eta, min=1e-6, max=2)
         with torch.no_grad():
             xstar, n_iters = self.find_fixed_point(measurement)
         Txstar = xstar - self.eta * (self.A.adjoint(torch.sub(self.A.forward(xstar), measurement)) + self.dncnn(xstar))
@@ -88,8 +87,10 @@ class DEGRAD(torch.nn.Module):
     
     def _converge(self, x1, x2):
         x1 = torch.reshape(x1, [self.bsz, -1])
-        x2 = torch.flatten(x2, [self.bsz, -1])
-        if torch.max(torch.norm(torch.sub(x1, x2), dim=1)) < self.threshold:
+        x2 = torch.flatten(x2, start_dim=1)
+        n1 = torch.max(torch.norm(torch.sub(x1, x2), dim=1))
+        n2 = torch.max(torch.norm(x2, dim=1))
+        if  n1/n2 < self.threshold:
             return True
         else:
             return False

@@ -6,9 +6,12 @@ from matplotlib import pyplot as plt
 
 def train_dncnn(model, loader, operator, loss_function, optimizer, device):
     model.train()
+    nbatch = 200 // model.bsz # only train on 200 images
     L = []
     grad_norm_list = []
     for batch_idx, X in enumerate(loader):
+        if batch_idx > nbatch:
+            break
         optimizer.zero_grad()
         X = X.to(device)
         d = operator.forward(X)
@@ -39,17 +42,20 @@ def train_jfb(model, loader, operator, loss_function, optimizer, device):
         n_iters_list.append(n_iters)
     return L, n_iters_list, grad_norm_list
 
-def valid_jfb(model, loader, operator, loss_function, device):
+def valid_jfb(model, loader, operator, loss_function, device, ssim_calculator):
     model.eval()
     model.dncnn.eval()
     acc = 0
+    ssim = 0
     for batch_idx, X in enumerate(loader):
         X = X.to(device)
         d = operator.forward(X)
         pred, _ = model(d)
         batch_loss = loss_function(pred, X)
+        batch_ssim = ssim_calculator(pred, X)
         acc += batch_loss.item()
-    return acc/(batch_idx + 1)
+        ssim += batch_ssim.item()
+    return acc/(batch_idx + 1), ssim/(batch_idx + 1)
 
 
 def plotting(loss_list, n_iters_list, grad_norm_list, epoch_number, path):

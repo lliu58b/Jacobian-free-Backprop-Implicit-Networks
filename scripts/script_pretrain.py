@@ -23,7 +23,7 @@ transform = transforms.Compose(
     ]
 )
 bsz = 32 # batch size
-blur_kernel_size = 5
+blur_kernel_size = 9
 kernel_sigma = 5.0
 noise_sigma = 1e-2
 
@@ -49,7 +49,7 @@ optimizer = torch.optim.Adam(dncnn_model.parameters(), lr=learning_rate)
 avg_loss_epoch = []
 avg_grad_norm = []
 data_batch = iter(test_dataloader).next()
-temppath = "./results/dncnn_pretrain/"
+temppath = "./results/dncnn_pretrain_200/"
 for epoch in range(num_epoch):
     epoch_loss_list, grad_norm_list = train_dncnn(dncnn_model, train_dataloader, measurement_process, lossfunction, optimizer, device)
     epoch_loss = np.mean(epoch_loss_list)
