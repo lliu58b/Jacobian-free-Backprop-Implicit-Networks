@@ -23,12 +23,13 @@ def train_dncnn(model, loader, operator, loss_function, optimizer, device):
         L.append(batch_loss.item())
     return L, grad_norm_list
 
-def train_jfb(model, loader, operator, loss_function, optimizer, device):
+def train_jfb(model, loader, operator, loss_function, optimizer, device, ssim_calculator):
     model.train()
     model.dncnn.train()
     L = []
     n_iters_list = []
     grad_norm_list = []
+    ssim_list = []
     for batch_idx, X in enumerate(loader):
         optimizer.zero_grad()
         X = X.to(device)
@@ -40,7 +41,10 @@ def train_jfb(model, loader, operator, loss_function, optimizer, device):
         optimizer.step()
         L.append(batch_loss.item())
         n_iters_list.append(n_iters)
-    return L, n_iters_list, grad_norm_list
+        with torch.no_grad():
+            batch_ssim = ssim_calculator(pred, X)
+        ssim_list.append(batch_ssim.item())
+    return L, n_iters_list, grad_norm_list, ssim_list
 
 def valid_jfb(model, loader, operator, loss_function, device, ssim_calculator):
     model.eval()
