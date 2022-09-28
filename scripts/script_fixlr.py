@@ -41,10 +41,10 @@ measurement_process = OperatorPlusNoise(A, noise_sigma=noise_sigma)
 
 num_channels = 3
 lossfunction = torch.nn.MSELoss(reduction='sum')
-learning_rate = 0.0001 # Try different
+learning_rate = 0.001 # Try different
 step_size = 0.001
-warming_epochs = 20
-num_epoch = 200
+warming_epochs = 500
+num_epoch = 500
 dncnn_kernel_size = 3
 model = DEGRAD(c=num_channels, batch_size=bsz, blur_operator=A, step_size=step_size, kernel_size=dncnn_kernel_size)
 model.to(device)
@@ -62,21 +62,24 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 avg_loss_epoch = [] # average training loss across epochs
 avg_n_iters = [] # average number of iterations across epochs
 avg_grad_norm = [] # average parameters' gradient norm across epochs
+avg_train_ssim = []
 valid_loss_list = [] # validation loss values across epochs
 valid_ssim_list = [] # validation ssim values across epochs
-temppath = "./results/degrad_fixlr_200/"
+temppath = "./results/degrad_fixlr_200_0912_1/"
 lowest_loss = np.Inf
 ssim_calculator = SSIM()
 
 model.max_num_iter = 20
 for epoch in range(warming_epochs):
-    epoch_loss_list, epoch_n_iters_list, grad_norm_list = train_jfb(model, train_dataloader, measurement_process, lossfunction, optimizer, device)
+    epoch_loss_list, epoch_n_iters_list, grad_norm_list, train_ssim_list = train_jfb(model, train_dataloader, measurement_process, lossfunction, optimizer, device, ssim_calculator)
     epoch_loss = np.mean(epoch_loss_list)
     epoch_n_iters = np.mean(epoch_n_iters_list)
     epoch_grad_norm = np.mean(grad_norm_list)
+    epoch_ssim = np.mean(train_ssim_list)
     avg_loss_epoch.append(epoch_loss)
     avg_n_iters.append(epoch_n_iters)
     avg_grad_norm.append(epoch_grad_norm)
+    avg_train_ssim.append(epoch_ssim)
     valid_loss, valid_ssim = valid_jfb(model, valid_dataloader, measurement_process, lossfunction, device, ssim_calculator)
     valid_loss_list.append(valid_loss)
     valid_ssim_list.append(valid_ssim)
@@ -84,18 +87,20 @@ for epoch in range(warming_epochs):
         lowest_loss = valid_loss
         torch.save(model.state_dict(), temppath+"trained_model_warmup.pth")
         print("Epoch "+str(epoch+1)+" weights saved")
-    print(f"Epoch {epoch+1} finished, avg loss {epoch_loss:.3f}, avg #iters {epoch_n_iters:.3f}, avg grad norm {epoch_grad_norm:.3f}, valid loss {valid_loss:.3f}, valid ssim {valid_ssim:.3f}")
+    print(f"Epoch {epoch+1} finished, avg loss {epoch_loss:.3f}, avg #iters {epoch_n_iters:.3f}, avg grad norm {epoch_grad_norm:.3f}, train ssim {epoch_ssim:.3f}, valid loss {valid_loss:.3f}, valid ssim {valid_ssim:.3f}")
 
 model.max_num_iter = 150
 lowest_loss = np.Inf
 for epoch in range(num_epoch):
-    epoch_loss_list, epoch_n_iters_list, grad_norm_list = train_jfb(model, train_dataloader, measurement_process, lossfunction, optimizer, device)
+    epoch_loss_list, epoch_n_iters_list, grad_norm_list, train_ssim_list = train_jfb(model, train_dataloader, measurement_process, lossfunction, optimizer, device, ssim_calculator)
     epoch_loss = np.mean(epoch_loss_list)
     epoch_n_iters = np.mean(epoch_n_iters_list)
     epoch_grad_norm = np.mean(grad_norm_list)
+    epoch_ssim = np.mean(train_ssim_list)
     avg_loss_epoch.append(epoch_loss)
     avg_n_iters.append(epoch_n_iters)
     avg_grad_norm.append(epoch_grad_norm)
+    avg_train_ssim.append(epoch_ssim)
     valid_loss, valid_ssim = valid_jfb(model, valid_dataloader, measurement_process, lossfunction, device, ssim_calculator)
     valid_loss_list.append(valid_loss)
     valid_ssim_list.append(valid_ssim)
@@ -103,11 +108,12 @@ for epoch in range(num_epoch):
         lowest_loss = valid_loss
         torch.save(model.state_dict(), temppath+"trained_model.pth")
         print("Epoch "+str(epoch+1+warming_epochs)+" weights saved")
-    print(f"Epoch {epoch+1+warming_epochs} finished, avg loss {epoch_loss:.3f}, avg #iters {epoch_n_iters:.3f}, avg grad norm {epoch_grad_norm:.3f}, valid loss {valid_loss:.3f}, valid ssim {valid_ssim:.3f}")
+    print(f"Epoch {epoch+1+warming_epochs} finished, avg loss {epoch_loss:.3f}, avg #iters {epoch_n_iters:.3f}, avg grad norm {epoch_grad_norm:.3f}, train ssim {epoch_ssim:.3f}, valid loss {valid_loss:.3f}, valid ssim {valid_ssim:.3f}")
 
 # plotting(avg_loss_epoch, avg_n_iters, avg_grad_norm, epoch+1, temppath)
 np.save(temppath+"avg_loss_epoch", np.array(avg_loss_epoch))
 np.save(temppath+"avg_n_iters", np.array(avg_n_iters))
 np.save(temppath+"avg_grad_norm", np.array(avg_grad_norm))
+np.save(temppath+"avg_train_ssim", np.array(avg_train_ssim))
 np.save(temppath+"valid_loss_list", np.array(valid_loss_list))
 np.save(temppath+"valid_ssim_list", np.array(valid_ssim_list))
