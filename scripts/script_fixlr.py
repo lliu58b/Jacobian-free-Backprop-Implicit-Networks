@@ -65,7 +65,7 @@ avg_grad_norm = [] # average parameters' gradient norm across epochs
 avg_train_ssim = []
 valid_loss_list = [] # validation loss values across epochs
 valid_ssim_list = [] # validation ssim values across epochs
-temppath = "./results/degrad_fixlr_200_0912_1/"
+temppath = "./results/degrad_fixlr_200_0928/"
 lowest_loss = np.Inf
 ssim_calculator = SSIM()
 
