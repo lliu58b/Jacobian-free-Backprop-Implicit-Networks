@@ -1,9 +1,4 @@
 import torch
-import sys
-sys.path.append('./support')
-import spectral_norm_chen as chen
-
-from torch.nn import utils
 
 
 class DNCNN(torch.nn.Module):
@@ -17,29 +12,19 @@ class DNCNN(torch.nn.Module):
         self.bsz = batch_size
 
         layers = []
-        layers.append(utils.spectral_norm(torch.nn.Conv2d(in_channels=self.nchannels, out_channels= self.nfeatures, kernel_size=self.ksz, padding=self.padding, bias=False)))
+        layers.append(torch.nn.Conv2d(in_channels=self.nchannels, out_channels= self.nfeatures, kernel_size=self.ksz, padding=self.padding, bias=False))
         layers.append(torch.nn.ReLU(inplace=True))
         for _ in range(self.nlayers-2):
-            layers.append(utils.spectral_norm(torch.nn.Conv2d(in_channels=self.nfeatures, out_channels=self.nfeatures, kernel_size=self.ksz, padding=self.padding, bias=False)))
+            layers.append(torch.nn.Conv2d(in_channels=self.nfeatures, out_channels=self.nfeatures, kernel_size=self.ksz, padding=self.padding, bias=False))
             layers.append(torch.nn.BatchNorm2d(self.nfeatures))
             layers.append(torch.nn.ReLU(inplace=True))
-        layers.append(utils.spectral_norm(torch.nn.Conv2d(in_channels=self.nfeatures, out_channels=self.nchannels, kernel_size=self.ksz, padding=self.padding, bias=False)))
+        layers.append(torch.nn.Conv2d(in_channels=self.nfeatures, out_channels=self.nchannels, kernel_size=self.ksz, padding=self.padding, bias=False))
         # Put them altogether and call it dncnn
         self.dncnn = torch.nn.Sequential(*layers)
     
-    def forward(self, measurement):
-        return self.dncnn(measurement)
-    
-    def current_grad_norm(self):
-        with torch.no_grad():
-            S = 0
-            for p in self.parameters():
-                if p.grad==None:
-                    continue # some gradients don't exist
-                param_norm = torch.norm(p.grad.detach().data)
-                S += param_norm.item() ** 2
-            S = S ** 0.5
-        return S
+    def forward(self, d):
+        return self.dncnn(d)
+
 
 class DEGRAD(torch.nn.Module):
     def __init__(self, c, batch_size, blur_operator, step_size, kernel_size):
@@ -48,7 +33,7 @@ class DEGRAD(torch.nn.Module):
         self.nchannels = c
         self.A = blur_operator
         self.eta = torch.nn.Parameter(step_size*torch.ones(()))
-        self.max_num_iter = 150
+        self.max_num_iter = 50
         self.threshold = 1e-3 # this is specified in Gilton et al., 2021
         self.bsz = batch_size
 
@@ -56,23 +41,58 @@ class DEGRAD(torch.nn.Module):
         # chen.spectral_norm may be replaced by torch.nn.utils.spectral_norm
         self.dncnn = DNCNN(c=self.nchannels, batch_size=self.bsz, kernel_size=kernel_size)
     
-    def forward(self, measurement):
+    def forward(self, d):
         with torch.no_grad():
-            xstar, n_iters = self.find_fixed_point(measurement)
-        Txstar = xstar - self.eta * (self.A.adjoint(torch.sub(self.A.forward(xstar), measurement)) + self.dncnn(xstar))
+            xstar, n_iters = self.find_fixed_point(d)
+        Txstar = self.g(d, xstar)
         return Txstar, n_iters
 
-    def find_fixed_point(self, measurement):
+    def find_fixed_point(self, d):
         with torch.no_grad():
-            x0 = self.A.adjoint(measurement)
-            temp = x0
-            for i in range(self.max_num_iter):
-                x = temp - self.eta * (self.A.adjoint(torch.sub(self.A.forward(temp), measurement)) + self.dncnn(temp))
-                if self._converge(x, temp):
-                    return x, (i+1)
+            x0 = self.A.adjoint(d)
+            x, num_iter = self.anderson(lambda X: self.g(x0, X), x0, max_iter=self.max_num_iter, tol=self.threshold)
+        return x, num_iter
+    
+    def g(self, d, x):
+        return (x - self.eta * (self.A.adjoint(torch.sub(self.A.forward(x), d)) + self.dncnn(x)))
+    
+    def anderson(self, f, x0, m=5, lam=1e-4, max_iter=50, tol=1e-2, beta = 1.0):
+        """ Anderson acceleration for fixed point iteration. """
+        bsz, d, H, W = x0.shape
+        X = torch.zeros(bsz, m, d*H*W, dtype=x0.dtype, device=x0.device)
+        F = torch.zeros(bsz, m, d*H*W, dtype=x0.dtype, device=x0.device)
+        X[:,0], F[:,0] = x0.view(bsz, -1), f(x0).view(bsz, -1)
+        X[:,1], F[:,1] = F[:,0], f(F[:,0].view_as(x0)).view(bsz, -1)
+        
+        H = torch.zeros(bsz, m+1, m+1, dtype=x0.dtype, device=x0.device)
+        H[:,0,1:] = H[:,1:,0] = 1
+        y = torch.zeros(bsz, m+1, 1, dtype=x0.dtype, device=x0.device)
+        y[:,0] = 1
+        
+        K = 1
+        temp = None
+        for k in range(2, max_iter):
+            n = min(k, m)
+            G = F[:,:n]-X[:,:n]
+            H[:,1:n+1,1:n+1] = torch.bmm(G,G.transpose(1,2)) + lam*torch.eye(n, dtype=x0.dtype,device=x0.device)[None]
+            alpha = torch.solve(y[:,:n+1], H[:,:n+1,:n+1])[0][:, 1:n+1, 0]   # (bsz x n)
+            
+            X[:,k%m] = beta * (alpha[:,None] @ F[:,:n])[:,0] + (1-beta)*(alpha[:,None] @ X[:,:n])[:,0]
+            F[:,k%m] = f(X[:,k%m].view_as(x0)).view(bsz, -1)
+            
+            if k == 2:
+                temp = torch.reshape(X[:,k%m], [bsz, -1])
+            else:
+                temp2 = torch.reshape(X[:,k%m], [bsz, -1])
+                maxnorm1 = torch.max(torch.norm(torch.sub(temp2, temp), dim=1))
+                maxnorm2 = torch.max(torch.norm(temp2, dim=1))
+                if maxnorm1/maxnorm2 < tol:
+                    break
                 else:
-                    temp = x
-        return temp, self.max_num_iter
+                    K += 1
+                    temp = temp2 # go to next iteration
+
+        return X[:,k%m].view_as(x0), K   
     
     def current_grad_norm(self):
         with torch.no_grad():
@@ -84,16 +104,7 @@ class DEGRAD(torch.nn.Module):
                 S += param_norm.item() ** 2
             S = S ** 0.5
         return S
-    
-    def _converge(self, x1, x2):
-        x1 = torch.reshape(x1, [self.bsz, -1])
-        x2 = torch.flatten(x2, start_dim=1)
-        n1 = torch.max(torch.norm(torch.sub(x1, x2), dim=1))
-        n2 = torch.max(torch.norm(x2, dim=1))
-        if  n1/n2 < self.threshold:
-            return True
-        else:
-            return False
+
 
 class DEPROX(torch.nn.Module):
     def __init__(self, c, batch_size, blur_operator, step_size, kernel_size=3):
@@ -109,18 +120,18 @@ class DEPROX(torch.nn.Module):
         # Trainable parameters
         self.dncnn = DNCNN(c=self.nchannels, batch_size=self.bsz, kernel_size=kernel_size)
     
-    def forward(self, measurement):
+    def forward(self, d):
         with torch.no_grad():
-            xstar, n_iters = self.find_fixed_point(measurement)
-        Txstar = self.dncnn(xstar - self.eta * self.A.adjoint(torch.sub(self.A.forward(xstar), measurement)))
+            xstar, n_iters = self.find_fixed_point(d)
+        Txstar = self.dncnn(xstar - self.eta * self.A.adjoint(torch.sub(self.A.forward(xstar), d)))
         return Txstar, n_iters
 
-    def find_fixed_point(self, measurement):
+    def find_fixed_point(self, d):
         with torch.no_grad():
-            x0 = self.A.adjoint(measurement)
+            x0 = self.A.adjoint(d)
             temp = x0
             for i in range(self.max_num_iter):
-                x = self.dncnn(temp - self.eta * (self.A.adjoint(torch.sub(self.A.forward(temp), measurement))))
+                x = self.dncnn(temp - self.eta * (self.A.adjoint(torch.sub(self.A.forward(temp), d))))
                 if self._converge(x, temp):
                     return x, (i+1)
                 else:
@@ -189,16 +200,16 @@ class DEADMM(torch.nn.Module):
         
     # To change: forward and find_fixed_point
 
-    def forward(self, measurement):
+    def forward(self, d):
         with torch.no_grad():
-            xstar, ustar = self.find_fixed_point(measurement)
+            xstar, ustar = self.find_fixed_point(d)
         Tzstar = self.dncnn(torch.sub(xstar, ustar))
-        Txstar = torch.matmul(self.invert, torch.mul(self.alpha, self.A.adjoint(measurement)) + Tzstar + ustar)
+        Txstar = torch.matmul(self.invert, torch.mul(self.alpha, self.A.adjoint(d)) + Tzstar + ustar)
         return Txstar
 
-    def find_fixed_point(self, measurement): #y is measurement
+    def find_fixed_point(self, d): #y is d
         with torch.no_grad():
-            x0 = self.A.adjoint(measurement) # x0 is initialized as Ay
+            x0 = self.A.adjoint(d) # x0 is initialized as Ay
             z0 = torch.zeros(x0.shape) #z0 is initialized as all 0's
             u0 = 0
 
@@ -207,7 +218,7 @@ class DEADMM(torch.nn.Module):
             tempu = u0
             for i in range(self.max_num_iter):
                 z = self.dncnn(torch.sub(tempx, tempu)) # self.dncnn is R_theta, torch.sub means tempx-tempu
-                x = torch.matmul(self.invert, torch.mul(self.alpha, self.A.adjoint(measurement)) + z + tempu) # use z, tempu
+                x = torch.matmul(self.invert, torch.mul(self.alpha, self.A.adjoint(d)) + z + tempu) # use z, tempu
                 u = tempu + z - x # use tempu, x, z, because x, z have been updated
                 if torch.sqrt(torch.square(torch.norm(torch.sub(x, tempx)))+torch.square(torch.norm(torch.sub(u, tempu)))) < self.threshold: # if norm is below error threshold, return
                     return x, u
@@ -228,7 +239,7 @@ class DEADMM(torch.nn.Module):
             basis = torch.zeros([num_channels, H*W]).to('cuda')
             basis[:, i] = 1
             basis = torch.reshape(basis, [num_channels, H, W])
-            basis = A.forward(basis) 
+            basis = self.A.forward(basis) 
             A_mat[i, :] = torch.reshape(torch.squeeze(basis[0, :, :]), [1, -1])
             A_mat = torch.transpose(A_mat, 0, 1)
 
