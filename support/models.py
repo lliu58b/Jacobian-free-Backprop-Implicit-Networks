@@ -27,7 +27,7 @@ class DNCNN(torch.nn.Module):
 
 
 class DEGRAD(torch.nn.Module):
-    def __init__(self, c, batch_size, blur_operator, step_size, kernel_size):
+    def __init__(self, c, batch_size, blur_operator, step_size, kernel_size, anderson=True):
         super().__init__()
 
         self.nchannels = c
@@ -36,6 +36,7 @@ class DEGRAD(torch.nn.Module):
         self.max_num_iter = 50
         self.threshold = 1e-3 # this is specified in Gilton et al., 2021
         self.bsz = batch_size
+        self.anderson = anderson
 
         # Trainable parameters
         # chen.spectral_norm may be replaced by torch.nn.utils.spectral_norm
@@ -50,8 +51,21 @@ class DEGRAD(torch.nn.Module):
     def find_fixed_point(self, d):
         with torch.no_grad():
             x0 = self.A.adjoint(d)
-            x, num_iter = self.anderson(lambda X: self.g(x0, X), x0, max_iter=self.max_num_iter, tol=self.threshold)
-        return x, num_iter
+
+            # we could use anderson acceleration or not
+            if self.anderson:
+                x, num_iter = self.anderson(lambda X: self.g(x0, X), x0, max_iter=self.max_num_iter, tol=self.threshold)
+                return x, num_iter
+            else:
+                temp = x0
+                for i in range(self.max_num_iter):
+                    x = self.g(d, temp)
+                    if self._converge(x, temp):
+                        return x, (i+1)
+                    else:
+                        temp = x
+                return temp, self.max_num_iter
+        
     
     def g(self, d, x):
         return (x - self.eta * (self.A.adjoint(torch.sub(self.A.forward(x), d)) + self.dncnn(x)))
@@ -93,7 +107,17 @@ class DEGRAD(torch.nn.Module):
                     K += 1
                     temp = temp2 # go to next iteration
 
-        return X[:,k%m].view_as(x0), K   
+        return X[:,k%m].view_as(x0), K 
+
+    def _converge(self, x1, x2):
+        x1 = torch.reshape(x1, [self.bsz, -1])
+        x2 = torch.flatten(x2, start_dim=1)
+        n1 = torch.max(torch.norm(torch.sub(x1, x2), dim=1))
+        n2 = torch.max(torch.norm(x2, dim=1))
+        if  n1/n2 < self.threshold:
+            return True
+        else:
+            return False
     
     def current_grad_norm(self):
         with torch.no_grad():
