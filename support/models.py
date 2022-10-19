@@ -75,7 +75,8 @@ class DEGRAD(torch.nn.Module):
             n = min(k, m)
             G = F[:,:n]-X[:,:n]
             H[:,1:n+1,1:n+1] = torch.bmm(G,G.transpose(1,2)) + lam*torch.eye(n, dtype=x0.dtype,device=x0.device)[None]
-            alpha = torch.solve(y[:,:n+1], H[:,:n+1,:n+1])[0][:, 1:n+1, 0]   # (bsz x n)
+            alpha = torch.linalg.solve(H[:,:n+1,:n+1],y[:,:n+1].reshape([bsz, -1]))
+            alpha = alpha[:, 1:n+1]  # (bsz x n)
             
             X[:,k%m] = beta * (alpha[:,None] @ F[:,:n])[:,0] + (1-beta)*(alpha[:,None] @ X[:,:n])[:,0]
             F[:,k%m] = f(X[:,k%m].view_as(x0)).view(bsz, -1)
