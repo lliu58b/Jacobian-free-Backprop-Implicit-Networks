@@ -4,6 +4,12 @@ import numbers
 import numpy as np
 from matplotlib import pyplot as plt
 
+###############################################################################
+# The following operator classes are obtained from the code repository for 
+# Deep Equilibrium Architectures for Inverse Problems in Imaging: 
+# https://github.com/dgilton/deep_equilibrium_inverse
+###############################################################################
+
 # Define Operator classes
 class LinearOperator(torch.nn.Module):
     def __init__(self):

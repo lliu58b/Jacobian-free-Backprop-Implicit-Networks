@@ -9,13 +9,20 @@ from math import exp
 This file contains metrics to calculate performance
 '''
 
-
 # peak signal-to-noise ratio (PSNR)
-def cal_PSNR(pred, truth):
-    mse_loss = torch.nn.MSELoss(pred.detach().to('cpu'), truth).item()
-    psnr = -10 * np.log10(mse_loss)
-    return psnr
-
+def calculate_PSNR(truth, blurred, reconstruct):
+    mse_loss = torch.nn.MSELoss()
+    reconstruct_PSNR = 0
+    blur_PSNR = 0
+    bsz = truth.shape[0]
+    for i in range(bsz):
+        reconstruct_mse = mse_loss(reconstruct[i, :, :, :].detach().to('cpu'), truth[i, :, :, :]).item()
+        reconstruct_PSNR += -10 * np.log10(reconstruct_mse)
+        blur_mse = mse_loss(blurred[i, :, :, :].detach().to('cpu'), truth[i, :, :, :]).item()
+        blur_PSNR += -10 * np.log10(blur_mse)
+    reconstruct_PSNR /= bsz
+    blur_PSNR /= bsz
+    print(f"PSNR for reconstructed result is {reconstruct_PSNR:.4f} and the PSNR of the blurred image is {blur_PSNR:.4f}")
 
 # structural similarity index measure (SSIM)
 def gaussian(window_size, sigma):

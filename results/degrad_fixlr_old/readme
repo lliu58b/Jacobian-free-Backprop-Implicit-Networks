@@ -1,8 +1,0 @@
-Specifications of this model: 
-kernel size of the blurring operator: 5 x 5
-kernel size of the DnCNN: 3 x 3
-learning rate: 1e-4
-step size: 1e-3
-optimizer: adam
-
-dncnn pretrained for 200 epochs

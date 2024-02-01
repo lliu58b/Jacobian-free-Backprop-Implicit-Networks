@@ -1,10 +1,10 @@
-"""
-Spectral Normalization borrowed from https://arxiv.org/abs/1802.05957
-Real SN by convolution. Each layer has lipschtz constant of 1
-"""
+###############################################################################
+# Spectral Normalization borrowed from https://arxiv.org/abs/1802.05957
+# Real SN by convolution. Each layer has lipschtz constant of 1
+###############################################################################
+
 import torch
 from torch.nn.functional import conv2d
-from torch.nn.parameter import Parameter
 
 def normalize(tensor, eps=1e-12):
     norm = float(torch.sqrt(torch.sum(tensor * tensor)))
