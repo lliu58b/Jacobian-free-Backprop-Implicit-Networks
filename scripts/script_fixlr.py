@@ -13,8 +13,9 @@ from operators import *
 
 # Load the data
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-# data_location = './data/'
-data_location = "./data200/" # or other location that stores data.
+data_location = './data/'
+# data_location = "./data200/" 
+# or other location that stores data.
 
 transform = transforms.Compose(
     [
@@ -48,6 +49,11 @@ dncnn_kernel_size = 3
 model = DEGRAD(c=num_channels, batch_size=bsz, blur_operator=A, step_size=step_size, kernel_size=dncnn_kernel_size)
 model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+dncnn_model = DNCNN(c=num_channels, batch_size=bsz, kernel_size=dncnn_kernel_size)
+dncnn_model.to(device)
+dncnn_model.load_state_dict(torch.load("./results/dncnn_pretrain/pretrained_weights.pth"))
+model.dncnn = dncnn_model
 
 avg_loss_epoch = [] # average training loss across epochs
 avg_n_iters = [] # average number of iterations across epochs
